@@ -151,8 +151,8 @@ class _TransactionFormDialogState extends State<TransactionFormDialog> {
                   helperText: widget.transaction == null && _useCurrentTime
                       ? 'Automatic - will use server time'
                       : widget.transaction != null
-                          ? 'Tap to change timestamp'
-                          : 'Tap to set custom time',
+                      ? 'Tap to change timestamp'
+                      : 'Tap to set custom time',
                 ),
                 readOnly: true,
                 enabled: widget.transaction != null || !_useCurrentTime,
@@ -201,14 +201,12 @@ class _TransactionFormDialogState extends State<TransactionFormDialog> {
         FilledButton(
           onPressed: () {
             if (_formKey.currentState?.validate() ?? false) {
-              final result = <String, dynamic>{
-                'stampType': _stampType,
-              };
+              final result = <String, dynamic>{'stampType': _stampType};
 
               if (widget.transaction == null) {
                 // Creating new transaction
                 result['userId'] = _selectedUserId;
-                
+
                 // Only include timestamp if using manual time
                 if (!_useCurrentTime) {
                   result['timestamp'] = _selectedTimestamp.toIso8601String();
