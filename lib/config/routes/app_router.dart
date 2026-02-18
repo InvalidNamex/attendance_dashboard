@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/di/injection.dart';
+import '../../core/network/transaction_realtime_service.dart';
 import '../../core/widgets/adaptive_scaffold.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/settings_repository.dart';
@@ -74,6 +75,7 @@ class AppRouter {
               create: (_) => TransactionBloc(
                 getIt<TransactionRepository>(),
                 getIt<UserRepository>(),
+                getIt<TransactionRealtimeService>(),
               )..add(const LoadTransactions()),
               child: const TransactionsScreen(),
             ),

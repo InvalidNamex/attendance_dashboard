@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/error/failures.dart';
+import '../../../core/network/transaction_realtime_service.dart';
+import '../../../data/models/transaction_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/repositories/transaction_repository.dart';
 import '../../../data/repositories/user_repository.dart';
@@ -9,15 +12,86 @@ import 'transaction_state.dart';
 class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
   final TransactionRepository _transactionRepository;
   final UserRepository _userRepository;
+  final TransactionRealtimeService _realtimeService;
   List<UserModel> _cachedUsers = [];
+  StreamSubscription? _realtimeSubscription;
 
-  TransactionBloc(this._transactionRepository, this._userRepository)
-    : super(const TransactionInitial()) {
+  TransactionBloc(
+    this._transactionRepository,
+    this._userRepository,
+    this._realtimeService,
+  ) : super(const TransactionInitial()) {
     on<LoadTransactions>(_onLoad);
     on<CreateTransactionRequested>(_onCreate);
     on<UpdateTransactionRequested>(_onUpdate);
     on<DeleteTransactionRequested>(_onDelete);
     on<LoadTransactionUsers>(_onLoadUsers);
+    on<TransactionRealtimeUpdateReceived>(_onRealtimeUpdate);
+
+    _subscribeToRealtime();
+  }
+
+  void _subscribeToRealtime() {
+    _realtimeService.connect();
+    _realtimeSubscription = _realtimeService.events.listen((event) {
+      add(TransactionRealtimeUpdateReceived(event));
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _realtimeSubscription?.cancel();
+    _realtimeService.disconnect();
+    return super.close();
+  }
+
+  Future<void> _onRealtimeUpdate(
+    TransactionRealtimeUpdateReceived event,
+    Emitter<TransactionState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! TransactionLoaded &&
+        currentState is! TransactionActionSuccess) {
+      return;
+    }
+
+    final currentTransactions = currentState is TransactionLoaded
+        ? currentState.transactions
+        : (currentState as TransactionActionSuccess).transactions;
+
+    final List<TransactionModel> updatedTransactions = List.from(
+      currentTransactions,
+    );
+    final data = event.event.data;
+    final type = event.event.type;
+
+    try {
+      if (type == 'INSERT') {
+        final newTransaction = TransactionModel.fromJson(data);
+        // Add to top if sorting by newest, or just add
+        updatedTransactions.insert(0, newTransaction);
+      } else if (type == 'UPDATE') {
+        final updatedTransaction = TransactionModel.fromJson(data);
+        final index = updatedTransactions.indexWhere(
+          (t) => t.id == updatedTransaction.id,
+        );
+        if (index != -1) {
+          updatedTransactions[index] = updatedTransaction;
+        }
+      } else if (type == 'DELETE') {
+        final id = data['id'] as int;
+        updatedTransactions.removeWhere((t) => t.id == id);
+      }
+
+      emit(
+        TransactionLoaded(
+          transactions: updatedTransactions,
+          users: _cachedUsers,
+        ),
+      );
+    } catch (e) {
+      // Ignore malformed realtime events
+    }
   }
 
   Future<void> _onLoad(
@@ -36,17 +110,12 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
         if (_cachedUsers.isEmpty) _userRepository.getAllUsers(),
       ]);
 
-      final transactions = results[0];
+      final transactions = results[0] as List<TransactionModel>;
       if (results.length > 1) {
         _cachedUsers = (results[1] as List).cast<UserModel>();
       }
 
-      emit(
-        TransactionLoaded(
-          transactions: transactions.cast(),
-          users: _cachedUsers,
-        ),
-      );
+      emit(TransactionLoaded(transactions: transactions, users: _cachedUsers));
     } on AppFailure catch (e) {
       emit(TransactionError(e.message));
     } catch (e) {
@@ -65,6 +134,7 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
         stampType: event.stampType,
         timestamp: event.timestamp,
       );
+      // We still fetch to ensure consistency, but realtime might have already updated it
       final transactions = await _transactionRepository.getTransactions();
       emit(
         TransactionActionSuccess(

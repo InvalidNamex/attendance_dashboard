@@ -5,6 +5,8 @@ import '../../data/repositories/settings_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../network/api_service.dart';
+import '../network/transaction_realtime_service.dart';
+import '../../config/constants.dart';
 
 final getIt = GetIt.instance;
 
@@ -28,5 +30,8 @@ Future<void> setupDependencies() async {
   );
   getIt.registerLazySingleton<TransactionRepository>(
     () => TransactionRepository(getIt<ApiService>()),
+  );
+  getIt.registerLazySingleton<TransactionRealtimeService>(
+    () => TransactionRealtimeService(AppConstants.wsUrl),
   );
 }

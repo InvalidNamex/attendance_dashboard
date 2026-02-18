@@ -2,6 +2,8 @@ class AppConstants {
   AppConstants._();
 
   static const String baseUrl = 'https://attendance-yagn.onrender.com';
+  static const String wsUrl =
+      'wss://attendance-yagn.onrender.com/ws/transactions';
   static const String appName = 'Attendance Dashboard';
 
   // SharedPreferences keys

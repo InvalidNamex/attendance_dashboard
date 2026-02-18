@@ -5,6 +5,7 @@ class TransactionModel extends Equatable {
   final int userID;
   final DateTime timestamp;
   final String? photo;
+  final String? deviceId;
   final int stampType;
 
   const TransactionModel({
@@ -12,15 +13,17 @@ class TransactionModel extends Equatable {
     required this.userID,
     required this.timestamp,
     this.photo,
+    this.deviceId,
     required this.stampType,
   });
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     return TransactionModel(
       id: json['id'] as int,
-      userID: json['userID'] as int,
+      userID: (json['userID'] ?? json['user_id']) as int,
       timestamp: DateTime.parse(json['timestamp'] as String),
       photo: json['photo'] as String?,
+      deviceId: json['device_id'] as String?,
       stampType: json['stamp_type'] as int,
     );
   }
@@ -31,6 +34,7 @@ class TransactionModel extends Equatable {
       'userID': userID,
       'timestamp': timestamp.toIso8601String(),
       'photo': photo,
+      'device_id': deviceId,
       'stamp_type': stampType,
     };
   }
@@ -44,6 +48,7 @@ class TransactionModel extends Equatable {
     int? userID,
     DateTime? timestamp,
     String? photo,
+    String? deviceId,
     int? stampType,
   }) {
     return TransactionModel(
@@ -51,10 +56,18 @@ class TransactionModel extends Equatable {
       userID: userID ?? this.userID,
       timestamp: timestamp ?? this.timestamp,
       photo: photo ?? this.photo,
+      deviceId: deviceId ?? this.deviceId,
       stampType: stampType ?? this.stampType,
     );
   }
 
   @override
-  List<Object?> get props => [id, userID, timestamp, photo, stampType];
+  List<Object?> get props => [
+    id,
+    userID,
+    timestamp,
+    photo,
+    deviceId,
+    stampType,
+  ];
 }
