@@ -9,8 +9,48 @@ import '../bloc/user_event.dart';
 import '../bloc/user_state.dart';
 import 'widgets/user_form_dialog.dart';
 
-class UsersScreen extends StatelessWidget {
+class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
+
+  @override
+  State<UsersScreen> createState() => _UsersScreenState();
+}
+
+class _UsersScreenState extends State<UsersScreen> {
+  int _sortColumnIndex = 0;
+  bool _sortAscending = true;
+
+  List<UserModel> _sortUsers(List<UserModel> users) {
+    final sorted = List<UserModel>.from(users);
+    sorted.sort((a, b) {
+      int result;
+      switch (_sortColumnIndex) {
+        case 0:
+          result = a.userID.compareTo(b.userID);
+          break;
+        case 1:
+          result = a.userName.toLowerCase().compareTo(b.userName.toLowerCase());
+          break;
+        case 2:
+          result = (a.deviceID ?? '').compareTo(b.deviceID ?? '');
+          break;
+        case 3:
+          result = (a.isAdmin ? 1 : 0).compareTo(b.isAdmin ? 1 : 0);
+          break;
+        default:
+          result = 0;
+      }
+      return _sortAscending ? result : -result;
+    });
+    return sorted;
+  }
+
+  void _onSort(int columnIndex, bool ascending) {
+    setState(() {
+      _sortColumnIndex = columnIndex;
+      _sortAscending = ascending;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +92,8 @@ class UsersScreen extends StatelessWidget {
           );
         }
 
+        final sortedUsers = _sortUsers(users);
+
         return Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -87,14 +129,28 @@ class UsersScreen extends StatelessWidget {
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: DataTable(
+                              sortColumnIndex: _sortColumnIndex,
+                              sortAscending: _sortAscending,
                               columns: [
-                                DataColumn(label: Text(l10n.userId)),
-                                DataColumn(label: Text(l10n.userName)),
-                                DataColumn(label: Text(l10n.deviceId)),
-                                DataColumn(label: Text(l10n.role)),
+                                DataColumn(
+                                  label: Text(l10n.userId),
+                                  onSort: _onSort,
+                                ),
+                                DataColumn(
+                                  label: Text(l10n.userName),
+                                  onSort: _onSort,
+                                ),
+                                DataColumn(
+                                  label: Text(l10n.deviceId),
+                                  onSort: _onSort,
+                                ),
+                                DataColumn(
+                                  label: Text(l10n.role),
+                                  onSort: _onSort,
+                                ),
                                 DataColumn(label: Text(l10n.actions)),
                               ],
-                              rows: users.map((user) {
+                              rows: sortedUsers.map((user) {
                                 return DataRow(
                                   cells: [
                                     DataCell(Text('${user.userID}')),

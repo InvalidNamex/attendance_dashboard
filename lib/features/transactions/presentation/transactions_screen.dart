@@ -26,6 +26,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   int? _filterUserId;
   int? _filterStampType;
   DateTimeRange? _filterDateRange;
+  int _sortColumnIndex = 0;
+  bool _sortAscending = true;
 
   void _applyFilters() {
     context.read<TransactionBloc>().add(
@@ -50,6 +52,43 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   String _getUserName(int userId, List<UserModel> users) {
     final user = users.where((u) => u.userID == userId).firstOrNull;
     return user?.userName ?? 'User #$userId';
+  }
+
+  List<TransactionModel> _sortTransactions(
+    List<TransactionModel> transactions,
+    List<UserModel> users,
+  ) {
+    final sorted = List<TransactionModel>.from(transactions);
+    sorted.sort((a, b) {
+      int result;
+      switch (_sortColumnIndex) {
+        case 0:
+          result = a.id.compareTo(b.id);
+          break;
+        case 1:
+          result = _getUserName(a.userID, users)
+              .toLowerCase()
+              .compareTo(_getUserName(b.userID, users).toLowerCase());
+          break;
+        case 2:
+          result = a.timestamp.compareTo(b.timestamp);
+          break;
+        case 3:
+          result = a.stampType.compareTo(b.stampType);
+          break;
+        default:
+          result = 0;
+      }
+      return _sortAscending ? result : -result;
+    });
+    return sorted;
+  }
+
+  void _onSort(int columnIndex, bool ascending) {
+    setState(() {
+      _sortColumnIndex = columnIndex;
+      _sortAscending = ascending;
+    });
   }
 
   @override
@@ -101,6 +140,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           );
         }
 
+        final sortedTransactions = _sortTransactions(transactions, users);
+
         return Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -151,15 +192,29 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: DataTable(
+                              sortColumnIndex: _sortColumnIndex,
+                              sortAscending: _sortAscending,
                               columns: [
-                                DataColumn(label: Text(l10n.transactionId)),
-                                DataColumn(label: Text(l10n.userName)),
-                                DataColumn(label: Text(l10n.timestamp)),
-                                DataColumn(label: Text(l10n.stampType)),
+                                DataColumn(
+                                  label: Text(l10n.transactionId),
+                                  onSort: _onSort,
+                                ),
+                                DataColumn(
+                                  label: Text(l10n.userName),
+                                  onSort: _onSort,
+                                ),
+                                DataColumn(
+                                  label: Text(l10n.timestamp),
+                                  onSort: _onSort,
+                                ),
+                                DataColumn(
+                                  label: Text(l10n.stampType),
+                                  onSort: _onSort,
+                                ),
                                 DataColumn(label: Text(l10n.photo)),
                                 DataColumn(label: Text('Actions')),
                               ],
-                              rows: transactions.map((t) {
+                              rows: sortedTransactions.map((t) {
                                 return DataRow(
                                   cells: [
                                     DataCell(Text('${t.id}')),
